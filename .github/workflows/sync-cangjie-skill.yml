@@ -1,0 +1,32 @@
+name: Sync cangjie-skill from upstream
+on:
+  schedule:
+    - cron: '23 3 * * *'        # 每天 UTC 03:23 ≈ 北京 11:23
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout skills repo
+        uses: actions/checkout@v4
+        with:
+          path: skills-repo
+      - name: Clone upstream cangjie-skill (latest)
+        run: git clone --depth 1 https://github.com/kangarooking/cangjie-skill.git upstream-cangjie
+      - name: Sync into skills/cangjie-skill
+        run: |
+          rm -rf skills-repo/cangjie-skill
+          mkdir -p skills-repo/cangjie-skill
+          ( cd upstream-cangjie && tar cf - --exclude='.git' . ) | ( cd skills-repo/cangjie-skill && tar xf - )
+      - name: Commit & Push if changed
+        run: |
+          cd skills-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A cangjie-skill
+          if git diff --cached --quiet; then echo "no changes"; else
+            git commit -m "chore: sync cangjie-skill from kangarooking/cangjie-skill ($(date -u +%Y-%m-%d))"
+            git push
+          fi
