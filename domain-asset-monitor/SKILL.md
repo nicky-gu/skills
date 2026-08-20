@@ -32,6 +32,7 @@ description: 监控公司外网资产（子域名发现 + 变更告警 + Shodan 
 |------|------|------|------|
 | 09:00 | 子域名枚举+变更告警 | daily-check.sh | 0 |
 | 09:30 | 漏洞扫描+新增高危告警 | daily-vulnscan.sh | 0 |
+| 14:00 | nuclei 模板库增量更新 | update-templates.sh | 0 |
 | 周一 10:00 | Shodan DNS 核查周报 | weekly-shodan.sh | 1 credit |
 
 ## 第 1 步：安装枚举器 + 建基线
@@ -118,6 +119,14 @@ nuclei 模板扫描（-severity medium,high,critical）→ JSONL
 ```
 
 cron：`30 9 * * *`（子域名检查后 30 分钟）。
+
+**模板库每日自更新（update-templates.sh，cron 14:00）：**
+官方 `-update-templates` 走 git 协议，国内受限网络常失败。替代方案——**GitHub API（目录列表）+ jsDelivr CDN（文件内容）双通道**：
+- jsDelivr（cdn.jsdelivr.net）镜像全部 GitHub 仓库且是公共免费 CDN，网络可达性最好
+- 增量逻辑：GitHub API 拿目录清单 → 本地不存在的/内容变化的对 jsDelivr 拉取
+- 覆盖目录：cves/2026, cves/2025, exposed-panels, exposures, default-logins, takeovers, misconfiguration
+- 新增/更新 >0 时推送企微通知；全量校验 948+ 模板耗时 10-20 分钟（cron 场景无压力）
+- 备选公共代理：`-proxy` 参数支持 http/socks5，可配公共代理池，但稳定性不如双通道方案
 
 设计取舍：
 - **告警只报增量**——首次全量报基线，之后只推新发现，避免重复噪音
