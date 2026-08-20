@@ -1,7 +1,8 @@
 #!/bin/bash
 # poppula.com 每日资产监控 — 免费渠道 + 新发现推送企业微信
 DOMAIN="poppula.com"
-WEBHOOK="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=fd2c911e-da2a-40f7-9069-62659071e894"
+source /home/ubuntu/asset-monitor/monitor.env 2>/dev/null
+WEBHOOK="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=$WECOM_KEY"
 BASELINE="/home/ubuntu/asset-monitor/baseline.txt"
 NEWFILE="/home/ubuntu/asset-monitor/current-$(date +%Y%m%d).txt"
 
