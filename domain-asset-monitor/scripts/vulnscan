@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+"""vulnscan - 轻量Web资产漏洞扫描器（无侵入式）
+用法: vulnscan <目标文件>   # 目标文件每行一个URL
+检测项: 安全响应头缺失 / TLS弱配置 / 高危路径暴露 / 默认页面 / 服务版本特征
+"""
+import sys, ssl, socket, json, urllib.request, urllib.parse, concurrent.futures, re, hashlib
+from datetime import datetime
+
+UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0"}
+CTX = ssl.create_default_context(); CTX.check_hostname = False; CTX.verify_mode = ssl.CERT_NONE
+
+# 高危路径（只GET，无载荷，不构成攻击）
+DANGEROUS_PATHS = [
+    ("/.git/config", "git", r"\[core\]|\[remote"),
+    ("/.env", "env", r"^(?:[A-Z_]+=.*){3,}"),
+    ("/server-status", "apache-status", r"Apache Server Status"),
+    ("/phpmyadmin/", "phpmyadmin", r"phpMyAdmin"),
+    ("/actuator/health", "spring-actuator", r'"status"'),
+    ("/api/v1/settings/index/", "jumpserver-api", r'\{.*\}'),
+    ("/druid/index.html", "alibaba-druid", r"druid"),
+    ("/console/", "web-console", r"login"),
+    ("/.svn/entries", "svn", r"^\d"),
+    ("/backup.sql", "backup-sql", r"(?:CREATE TABLE|INSERT INTO)"),
+    ("/debug/vars", "go-debug", r"cmdline"),
+    ("/admin", "admin-panel", r"(?:登录|login|password)", ),
+]
+
+SECURITY_HEADERS = [
+    "strict-transport-security", "content-security-policy",
+    "x-content-type-options", "x-frame-options",
+]
+
+def check_tls(host, port=443):
+    """TLS配置检测：协议版本+证书"""
+    issues = []
+    try:
+        # 弱协议检测
+        for proto_name, proto in [("TLSv1.0", ssl.PROTOCOL_TLS), ]:
+            try:
+                ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
+                ctx.minimum_version = ssl.TLSVersion.TLSv1
+                ctx.maximum_version = ssl.TLSVersion.TLSv1
+                with socket.create_connection((host, port), timeout=8) as sock:
+                    with ctx.wrap_socket(sock, server_hostname=host) as s:
+                        issues.append({"level": "MEDIUM", "type": "weak-tls", "detail": f"{host}:{port} 接受 TLSv1.0（旧协议）"})
+                break
+            except Exception:
+                pass
+        # 证书过期检测
+        ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
+        with socket.create_connection((host, port), timeout=8) as sock:
+            with ctx.wrap_socket(sock, server_hostname=host) as s:
+                cert = s.getpeercert(binary_form=False)
+                # 手动解析
+                import cryptography.x509 as x509
+                from cryptography.hazmat.backends import default_backend
+                der = s.getpeercert(binary_form=True)
+                c = x509.load_der_x509_certificate(der, default_backend())
+                days_left = (c.not_valid_after_utc - datetime.utcnow()).days
+                if days_left < 0:
+                    issues.append({"level": "HIGH", "type": "cert-expired", "detail": f"{host} 证书已过期 {-days_left} 天"})
+                elif days_left < 30:
+                    issues.append({"level": "MEDIUM", "type": "cert-expiring", "detail": f"{host} 证书 {days_left} 天后过期"})
+    except ImportError:
+        pass
+    except Exception:
+        pass
+    return issues
+
+def fetch(url, timeout=12, method="GET"):
+    try:
+        req = urllib.request.Request(url, headers=UA, method=method)
+        with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
+            return r.status, dict(r.headers), r.read(64*1024).decode('utf-8', errors='ignore')
+    except urllib.error.HTTPError as e:
+        return e.code, dict(e.headers), ""
+    except Exception:
+        return None, {}, ""
+
+def scan_url(url):
+    """单目标全项检测"""
+    findings = []
+    p = urllib.parse.urlparse(url)
+    host = p.hostname
+    https = url.startswith("https")
+
+    # 1. 安全响应头（仅https目标有意义做HSTS检查）
+    status, headers, body = fetch(url)
+    if status is None:
+        return url, [{"level": "INFO", "type": "unreachable", "detail": "目标不可达"}]
+    lower_headers = {k.lower(): v for k, v in headers.items()}
+    for h in SECURITY_HEADERS:
+        if h == "strict-transport-security" and not https:
+            continue
+        if h not in lower_headers:
+            sev = "LOW"
+            findings.append({"level": sev, "type": "missing-header", "detail": f"缺少安全头 {h}"})
+
+    # 2. 高危路径
+    def probe_path(item):
+        path, name, pattern = item[0], item[1], item[2]
+        st, _, bd = fetch(url.rstrip('/') + path, timeout=8)
+        if st == 200 and re.search(pattern, bd or "", re.I | re.M):
+            return {"level": "HIGH", "type": "exposed-path", "detail": f"敏感路径可访问: {path} ({name})"}
+        return None
+    with concurrent.futures.ThreadPoolExecutor(4) as ex:
+        for r in ex.map(probe_path, DANGEROUS_PATHS):
+            if r: findings.append(r)
+
+    # 3. 服务版本特征（响应头中的版本号暴露）
+    server_hdr = lower_headers.get("server", "")
+    ver_match = re.search(r'([\w-]+)/([\d.]+)', server_hdr)
+    if ver_match:
+        findings.append({"level": "INFO", "type": "tech-fingerprint", "detail": f"Server头暴露: {server_hdr}"})
+
+    # 4. TLS检测（https目标）
+    if https:
+        findings.extend(check_tls(host, p.port or 443))
+
+    return url, findings
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__); return
+    targets = [l.strip() for l in open(sys.argv[1]) if l.strip() and not l.startswith('#')]
+    all_results = {}
+    with concurrent.futures.ThreadPoolExecutor(8) as ex:
+        for url, findings in ex.map(scan_url, targets):
+            all_results[url] = findings
+    # 输出
+    out = {"scan_time": datetime.now().isoformat(), "targets": len(targets), "results": {}}
+    high_count = sum(1 for f in all_results.values() for x in f if x["level"] in ("HIGH", "MEDIUM"))
+    for url, findings in all_results.items():
+        if findings:
+            out["results"][url] = findings
+    out["summary"] = {"high_or_medium": high_count}
+    print(json.dumps(out, ensure_ascii=False, indent=1))
+
+if __name__ == "__main__":
+    main()
