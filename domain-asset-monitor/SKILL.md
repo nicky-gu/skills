@@ -10,6 +10,7 @@ description: 监控公司外网资产（子域名发现 + 变更告警 + Shodan 
 ## 前置条件
 
 - Linux 主机（有 cron）
+- Go 1.22+（nuclei 编译安装用）
 - Shodan API key（可选，学生/Dev 账号即可）
 - 企业微信群机器人 webhook（可选，告警用）
 - Python3 + `pip install cryptography`（TLS 证书检测用）
@@ -85,37 +86,45 @@ curl -s "$WEBHOOK" -H "Content-Type: application/json" -d '{
 
 验证：`crontab -l`，次日看 monitor.log；手动触发一次 `daily-check.sh` 确认首跑建基线。
 
-## 第 4 步：每日漏洞扫描
+## 第 4 步：每日漏洞扫描（双引擎）
 
-vulnscan（`scripts/vulnscan`）是零依赖轻量扫描器，**只做无侵入检测**（纯 GET，无攻击载荷），适合每日对自家资产跑：
+**引擎1：vulnscan（`scripts/vulnscan`）**——零依赖轻量检测器，无侵入纯 GET：
+- 敏感路径暴露（HIGH）：.git/config、.env、phpMyAdmin、actuator、Druid 等 12 类
+- TLS 弱配置（MEDIUM）：TLSv1.0 弱协议、证书过期/<30天
+- 安全响应头缺失（LOW）、技术栈指纹（INFO）
 
-检测项：
-- **敏感路径暴露**（HIGH）：.git/config、.env、phpMyAdmin、Spring actuator、Druid、jumpserver API 等 12 类
-- **TLS 配置**（MEDIUM）：弱协议 TLSv1.0 接受、证书过期/<30天
-- **安全响应头缺失**（LOW）：HSTS/CSP/X-Content-Type-Options/X-Frame-Options
-- **技术栈指纹**（INFO）：Server 头版本暴露
-
+**引擎2：nuclei（官方模板引擎，561+ 模板）**——每日主力扫描：
 ```bash
-# 目标清单（只放真实服务，泛解析兜底域名不要放）
-cat > ~/asset-monitor/scan-targets.txt << 'EOF'
-https://www.example.com
-http://jumpserver.example.com:81
-EOF
+# 安装（Go 编译方式，二进制下载被网络拦截时的可靠路径）
+export GOPROXY=https://goproxy.cn,direct
+go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+# → 产物在 ~/go/bin/nuclei
+
+# 模板获取（nuclei -update-templates 被网络拦时，用 GitHub API 逐目录拉）：
+# 关键目录：http/{cves,exposed-panels,misconfiguration,exposures,default-logins,takeovers}
+# 放到 ~/.config/nuclei/templates/http/ 下，共约 560+ 模板即可覆盖企业资产监控场景
 
 # 手动跑
-vulnscan ~/asset-monitor/scan-targets.txt
-
-# 每日自动化（daily-vulnscan.sh）：
-# 扫描 → 与昨日 vulnscan-latest.json 比对 → 仅"新增"高危/中危推送企微 → 更新基线
-# cron: 30 9 * * *（在子域名检查后30分钟，新发现的资产可人工加入目标清单）
+nuclei -l scan-targets.txt -t ~/.config/nuclei/templates/http/ \
+  -severity medium,high,critical -jsonl -o result.jsonl -silent -duc
 ```
 
-告警设计：**首跑全量报，之后只报增量**——避免每天重复推送同样的低危噪音；LOW/INFO 不推送只落盘。
+**双引擎每日流程（daily-vulnscan.sh）：**
+```
+vulnscan 轻量扫描 → 落盘 JSON
+nuclei 模板扫描（-severity medium,high,critical）→ JSONL
+与上次结果比对 template-id 集合 → 仅"新增"发现推送企微
+清理 30 天前的历史结果
+```
 
-已知局限（故意的设计取舍）：
-- 不做已知 CVE 的版本匹配（那是 nuclei 的活，需要时可手动补跑）
-- 堡垒机类目标若有 WAF，从数据中心 IP 扫描可能不可达（记录 unreachable 即可，从办公网手测）
-- 扫描频率每日 1 次足够；更频繁容易触发自家 WAF 告警
+cron：`30 9 * * *`（子域名检查后 30 分钟）。
+
+设计取舍：
+- **告警只报增量**——首次全量报基线，之后只推新发现，避免重复噪音
+- **LOW/INFO 不推送**只落盘（vulnscan 的安全头缺失每天一样，推了是骚扰）
+- nuclei 用 `-duc`（禁用联网更新检查）+ `timeout 1800` 兜底
+- 目标不可达时 nuclei 自动跳过（如堡垒机被 WAF 拦数据中心 IP），属正常
+- 需要全量 CVE 扫描时可手动补跑全模板库（网络好的环境 `nuclei -update-templates`）
 
 ## 第 5 步：Shodan 集成（额度优化）
 
