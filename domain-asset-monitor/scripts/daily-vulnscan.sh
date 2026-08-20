@@ -6,7 +6,8 @@ SCAN=/home/ubuntu/.local/bin/vulnscan
 NUCLEI=/home/ubuntu/go/bin/nuclei
 TPL=~/.config/nuclei/templates/http/
 DIR=/home/ubuntu/asset-monitor
-WEBHOOK="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=fd2c911e-da2a-40f7-9069-62659071e894"
+source /home/ubuntu/asset-monitor/monitor.env 2>/dev/null
+WEBHOOK="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=$WECOM_KEY"
 TODAY_N=$(date +%Y%m%d)
 
 # ---- 引擎1: vulnscan 轻量 ----
