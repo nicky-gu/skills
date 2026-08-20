@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+"""subenum - 被动子域名枚举（crt.sh + HackerTarget + Rapiddns + DNS字典），零API key"""
+import sys, json, ssl, urllib.request, urllib.parse, socket, concurrent.futures, re
+
+UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0"}
+CTX = ssl.create_default_context(); CTX.check_hostname = False; CTX.verify_mode = ssl.CERT_NONE
+
+def fetch(url, timeout=25):
+    try:
+        req = urllib.request.Request(url, headers=UA)
+        with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
+            return r.read().decode('utf-8', errors='ignore')
+    except Exception:
+        return ""
+
+def from_crtsh(domain):
+    for _ in range(3):
+        txt = fetch(f"https://crt.sh/?q=%.{domain}&output=json")
+        try:
+            data = json.loads(txt)
+            names = set()
+            for e in data:
+                for n in e.get('name_value','').split('\n'):
+                    n = n.strip().lstrip('*.')
+                    if n.endswith(domain): names.add(n)
+            return names
+        except Exception: pass
+    return set()
+
+def from_rapiddns(domain):
+    txt = fetch(f"https://rapiddns.io/subdomain/{domain}?full=1")
+    return set(re.findall(r'([a-zA-Z0-9_-]+\.' + re.escape(domain) + r')', txt))
+
+def from_hackertarget(domain):
+    txt = fetch(f"https://api.hackertarget.com/hostsearch/?q={domain}")
+    return set(l.split(',')[0] for l in txt.splitlines() if l.strip() and domain in l and ',' in l)
+
+DICT = ("www api app mail vpn oa crm erp dev test staging git gitlab gitea jenkins wiki admin portal cdn img "
+        "static shop store m h5 mini wechat wx pay sso login auth id account jumpserver vault report grafana "
+        "prometheus kibana es elk mysql redis mongo rabbitmq nacos zk etcd consul jira confluence hr ehr "
+        "finance bi dav file nas backup bac seafile nextcloud owncloud web proxy nginx openresty waf safeline "
+        "s ent www2 beta uat pre prod demo sandbox lab temp old legacy new internal intranet ext external "
+        "meet video live rtmp push mqtt iot device api2 open gateway gw hook cb callback notify push2 "
+        "smtp pop imap ftp sftp ssh rdp win nps frp").split()
+
+def dns_probe(domain):
+    found = set()
+    def resolve(sub):
+        fqdn = f"{sub}.{domain}"
+        try:
+            ip = socket.gethostbyname(fqdn)
+            return (fqdn, ip)
+        except Exception:
+            return None
+    with concurrent.futures.ThreadPoolExecutor(50) as ex:
+        for r in ex.map(resolve, DICT):
+            if r: found.add(r)
+    return found
+
+if __name__ == "__main__":
+    domain = sys.argv[1] if len(sys.argv) > 1 else "poppula.com"
+    passive = set()
+    print(f"[*] 被动枚举: crt.sh / rapiddns / hackertarget ...", file=sys.stderr)
+    for fn in (from_crtsh, from_rapiddns, from_hackertarget):
+        r = fn(domain)
+        passive |= r
+        print(f"    {fn.__name__}: +{len(r)}", file=sys.stderr)
+    print(f"[*] DNS 字典探测（{len(DICT)} 个常见子域）...", file=sys.stderr)
+    resolved = dns_probe(domain)
+    all_names = passive | set(f"{d}" for d, _ in resolved)
+    print(f"\n[+] 共发现 {len(all_names)} 个子域名（被动 {len(passive)} + 字典命中 {len(resolved)}）", file=sys.stderr)
+    for name in sorted(all_names):
+        ip = dict(resolved).get(name, "")
+        print(f"{name}{chr(9)}{ip}")
