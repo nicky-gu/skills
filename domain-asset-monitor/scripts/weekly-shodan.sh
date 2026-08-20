@@ -1,7 +1,8 @@
 #!/bin/bash
 # 每周 Shodan 主动核查（消耗 ~2 query credits）
-KEY="lHNuagJKdw5vVZ0CglqUstIzjpxYy3u8"
-WEBHOOK="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=fd2c911e-da2a-40f7-9069-62659071e894"
+KEY="$SHODAN_KEY"
+source /home/ubuntu/asset-monitor/monitor.env 2>/dev/null
+WEBHOOK="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=$WECOM_KEY"
 OUT="/home/ubuntu/asset-monitor/shodan-$(date +%Y%m%d).json"
 
 # Shodan DNS 数据库子域名（1 credit）
