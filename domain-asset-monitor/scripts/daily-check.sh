@@ -16,9 +16,21 @@ if [ ! -f "$BASELINE" ]; then
   exit 0
 fi
 
-# 对比新发现
+# 对比新发现（容忍抖动：消失的子域只在"连续2天都不出现"时才告警，避免DNS缓存抖动误报）
 new_subs=$(comm -23 <(echo "$subs") <(awk '{print $1}' $BASELINE | sort))
-gone_subs=$(comm -13 <(echo "$subs") <(awk '{print $1}' $BASELINE | sort))
+# 昨天的记录（若存在）用于二次确认消失
+YESTERDAY_FILE="/home/ubuntu/asset-monitor/current-$(date -d yesterday +%Y%m%d).txt"
+if [ -f "$YESTERDAY_FILE" ]; then
+  # 今天没出现 + 昨天也没出现 = 真消失；昨天还在 = 可能抖动，不告警
+  gone_subs=$(comm -13 <(echo "$subs") <(awk '{print $1}' $BASELINE | sort) | comm -12 - <(awk '{print $1}' "$YESTERDAY_FILE" | sort) | comm -23 /dev/null - 2>/dev/null || true)
+  # 修正：消失 = 在基线里但今天不在，且昨天也不在
+  gone_subs=$(comm -13 <(echo "$subs") <(awk '{print $1}' $BASELINE | sort))
+  gone_subs=$(echo "$gone_subs" | while read s; do
+    [ -n "$s" ] && ! grep -q "^$s" "$YESTERDAY_FILE" 2>/dev/null && echo "$s"
+  done)
+else
+  gone_subs=$(comm -13 <(echo "$subs") <(awk '{print $1}' $BASELINE | sort))
+fi
 
 if [ -n "$new_subs" ] || [ -n "$gone_subs" ]; then
   # 构造 markdown 消息
