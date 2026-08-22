@@ -3,7 +3,6 @@ set -a; source /home/ubuntu/asset-monitor/monitor.env; set +a
 # nuclei 模板每日更新：GitHub API(目录列表) + jsDelivr CDN(文件内容) 双通道
 # 官方 -update-templates 走 git 协议被网络拦截，此为替代方案
 TPL_DIR=~/.config/nuclei/templates
-WEBHOOK = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=" + os.environ.get("WECOM_KEY", "")""
 LOG=/home/ubuntu/asset-monitor/monitor.log
 
 python3 << "PYEOF" >> /home/ubuntu/asset-monitor/monitor.log 2>&1
