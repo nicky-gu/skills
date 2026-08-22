@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
+#!/home/ubuntu/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/bin/python3.11
 """subenum - 被动子域名枚举（crt.sh + HackerTarget + Rapiddns + DNS字典），零API key"""
-import sys, json, ssl, urllib.request, urllib.parse, socket, concurrent.futures, re
+import sys, json, ssl, time, urllib.request, urllib.parse, socket, concurrent.futures, re
 
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0"}
 CTX = ssl.create_default_context(); CTX.check_hostname = False; CTX.verify_mode = ssl.CERT_NONE
@@ -43,16 +43,34 @@ DICT = ("www api app mail vpn oa crm erp dev test staging git gitlab gitea jenki
         "meet video live rtmp push mqtt iot device api2 open gateway gw hook cb callback notify push2 "
         "smtp pop imap ftp sftp ssh rdp win nps frp").split()
 
+DNS_SERVERS = ["8.8.8.8", "223.5.5.5", "119.29.29.29"]
+
+def resolve_multi(fqdn):
+    """串行轮询多公共DNS，任一命中即返回。
+    不并发（避免UDP资源竞争），NXDOMAIN立即跳下一个DNS交叉验证。"""
+    import dns.resolver
+    for server in DNS_SERVERS:
+        try:
+            r = dns.resolver.Resolver(configure=False)
+            r.nameservers = [server]
+            r.lifetime = 5
+            r.timeout = 4
+            ans = r.resolve(fqdn, "A")
+            return ans[0].to_text()
+        except dns.resolver.NXDOMAIN:
+            continue  # 此DNS说不存在，问下一个交叉验证
+        except Exception:
+            continue  # 超时/其他，换下一个DNS
+    return None
+
 def dns_probe(domain):
+    """多DNS验证版：8.8.8.8/223.5.5.5/119.29.29.29 三路并发，任一命中即命中"""
     found = set()
     def resolve(sub):
         fqdn = f"{sub}.{domain}"
-        try:
-            ip = socket.gethostbyname(fqdn)
-            return (fqdn, ip)
-        except Exception:
-            return None
-    with concurrent.futures.ThreadPoolExecutor(50) as ex:
+        ip = resolve_multi(fqdn)
+        return (fqdn, ip) if ip else None
+    with concurrent.futures.ThreadPoolExecutor(3) as ex:
         for r in ex.map(resolve, DICT):
             if r: found.add(r)
     return found
