@@ -1,3 +1,4 @@
-# WAF 后面的资产——只做存活监测，不做漏洞扫描（避免触发自家 WAF 告警/封IP）
-https://www.poppula.com
-https://poppula.com
+# 不做漏洞扫描的资产（WAF防护中/明确排除）
+# jumpserver:81 在雷池WAF后面；:444 明确排除不扫
+http://jumpserver.poppula.com:81
+https://jumpserver.poppula.com:444
