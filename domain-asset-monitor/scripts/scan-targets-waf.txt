@@ -1,0 +1,3 @@
+# WAF 后面的资产——只做存活监测，不做漏洞扫描（避免触发自家 WAF 告警/封IP）
+https://www.poppula.com
+https://poppula.com
