@@ -1,3 +1,4 @@
-# 非 WAF 端口资产——跑 nuclei 漏洞扫描
-http://jumpserver.poppula.com:81
-https://jumpserver.poppula.com:444
+# 漏洞扫描目标（无WAF、直连可达）
+# 云上 139.224.10.106 的 443（nginx 直出，无WAF）
+https://www.poppula.com
+https://poppula.com
