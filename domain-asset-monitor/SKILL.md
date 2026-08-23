@@ -100,8 +100,10 @@ curl -s "$WEBHOOK" -H "Content-Type: application/json" -d '{
 
 | 目标文件 | 内容 | 动作 |
 |---------|------|------|
-| `scan-targets-waf.txt` | WAF 后面的资产（官网 80/443 等） | **只做 HTTP 存活监测**（不跑 nuclei——扫了被 WAF 拦，还可能触发自家告警/封扫描 IP） |
-| `scan-targets-direct.txt` | 非 WAF 端口资产（堡垒机 81/444 等非常规端口） | vulnscan 轻量检测 + **nuclei 全模板扫描** |
+| `scan-targets-waf.txt` | 不做漏扫的资产（WAF 后面的如 jumpserver:81；或明确排除的如 jumpserver:444） | **只做 HTTP 存活监测**（不跑 nuclei——扫了被 WAF 拦，还可能触发自家告警/封扫描 IP） |
+| `scan-targets-direct.txt` | 无 WAF 直连资产（如云上 443 nginx 直出的官网） | vulnscan 轻量检测 + **nuclei 全模板扫描** |
+
+**实测确认（2026-08-23）**：www.poppula.com:443 为 nginx/1.18.0 直出（SQLi payload 直接 200 放行，无 WAF）→ 归入扫描组；jumpserver:81 前置雷池 WAF、:444 用户明确排除 → 归入只监测组。
 
 ```
 流程：
