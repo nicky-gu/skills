@@ -87,53 +87,37 @@ curl -s "$WEBHOOK" -H "Content-Type: application/json" -d '{
 
 验证：`crontab -l`，次日看 monitor.log；手动触发一次 `daily-check.sh` 确认首跑建基线。
 
-## 第 4 步：每日漏洞扫描（双引擎）
+## 第 4 步：每日漏洞扫描（分层策略）
 
-**引擎1：vulnscan（`scripts/vulnscan`）**——零依赖轻量检测器，无侵入纯 GET：
+**vulnscan（`scripts/vulnscan`）**——零依赖轻量检测器，无侵入纯 GET：
 - 敏感路径暴露（HIGH）：.git/config、.env、phpMyAdmin、actuator、Druid 等 12 类
 - TLS 弱配置（MEDIUM）：TLSv1.0 弱协议、证书过期/<30天
 - 安全响应头缺失（LOW）、技术栈指纹（INFO）
 
-**引擎2：nuclei（官方模板引擎，561+ 模板）**——每日主力扫描：
-```bash
-# 安装（Go 编译方式，二进制下载被网络拦截时的可靠路径）
-export GOPROXY=https://goproxy.cn,direct
-go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
-# → 产物在 ~/go/bin/nuclei
+**nuclei（官方模板引擎，2098+ 模板）**——每日主力扫描。
 
-# 模板获取（nuclei -update-templates 被网络拦时，用 GitHub API 逐目录拉）：
-# 关键目录：http/{cves,exposed-panels,misconfiguration,exposures,default-logins,takeovers}
-# 放到 ~/.config/nuclei/templates/http/ 下，共约 560+ 模板即可覆盖企业资产监控场景
+**分层扫描策略（daily-vulnscan.sh v3）**——WAF 资产与直连资产区别对待：
 
-# 手动跑
-nuclei -l scan-targets.txt -t ~/.config/nuclei/templates/http/ \
-  -severity medium,high,critical -jsonl -o result.jsonl -silent -duc
+| 目标文件 | 内容 | 动作 |
+|---------|------|------|
+| `scan-targets-waf.txt` | WAF 后面的资产（官网 80/443 等） | **只做 HTTP 存活监测**（不跑 nuclei——扫了被 WAF 拦，还可能触发自家告警/封扫描 IP） |
+| `scan-targets-direct.txt` | 非 WAF 端口资产（堡垒机 81/444 等非常规端口） | vulnscan 轻量检测 + **nuclei 全模板扫描** |
+
 ```
-
-**双引擎每日流程（daily-vulnscan.sh）：**
-```
-vulnscan 轻量扫描 → 落盘 JSON
-nuclei 模板扫描（-severity medium,high,critical）→ JSONL
-与上次结果比对 template-id 集合 → 仅"新增"发现推送企微
-清理 30 天前的历史结果
+流程：
+1. WAF 资产逐个 curl 存活检查 → 不可达推送企微告警
+2. 直连资产：vulnscan 轻量 → nuclei(-severity medium,high,critical)
+3. 与上次比对 template-id 集合 → 仅"新增"发现推送企微
+4. 清理 30 天前历史
 ```
 
 cron：`30 9 * * *`（子域名检查后 30 分钟）。
 
-**模板库每日自更新（update-templates.sh，cron 14:00）：**
-官方 `-update-templates` 走 git 协议，国内受限网络常失败。替代方案——**GitHub API（目录列表）+ jsDelivr CDN（文件内容）双通道**：
-- jsDelivr（cdn.jsdelivr.net）镜像全部 GitHub 仓库且是公共免费 CDN，网络可达性最好
-- 增量逻辑：GitHub API 拿目录清单 → 本地不存在的/内容变化的对 jsDelivr 拉取
-- 覆盖目录：cves/2026, cves/2025, exposed-panels, exposures, default-logins, takeovers, misconfiguration
-- 新增/更新 >0 时推送企微通知；全量校验 948+ 模板耗时 10-20 分钟（cron 场景无压力）
-- 备选公共代理：`-proxy` 参数支持 http/socks5，可配公共代理池，但稳定性不如双通道方案
-
 设计取舍：
-- **告警只报增量**——首次全量报基线，之后只推新发现，避免重复噪音
-- **LOW/INFO 不推送**只落盘（vulnscan 的安全头缺失每天一样，推了是骚扰）
-- nuclei 用 `-duc`（禁用联网更新检查）+ `timeout 1800` 兜底
-- 目标不可达时 nuclei 自动跳过（如堡垒机被 WAF 拦数据中心 IP），属正常
-- 需要全量 CVE 扫描时可手动补跑全模板库（网络好的环境 `nuclei -update-templates`）
+- **WAF 资产不漏扫**是刻意的：漏洞扫描打 WAF 没意义（拦了测不到真实面），反而消耗 WAF 告警注意力、有封扫描出口 IP 的风险。WAF 资产的漏洞治理交给 WAF 规则 + 代码审计
+- **新端口的纳入流程**：Shodan 周报/子域名告警发现新端口 → 人工判断是否 WAF 后面 → 加入对应目标文件
+- **告警只报增量**——首次全量报基线；WAF 资产只在不可达时告警
+- nuclei 用 `-duc` + `timeout 1800` 兜底；目标不可达自动跳过
 
 ## 第 5 步：Shodan 集成（额度优化）
 
