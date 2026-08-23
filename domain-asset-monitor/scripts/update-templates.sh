@@ -12,11 +12,11 @@ import os
 TOKEN = os.environ.get("GH_TOKEN", "")
 DEST = os.path.expanduser("~/.config/nuclei/templates")
 REPO = "projectdiscovery/nuclei-templates"
-CDN = "https://cdn.jsdelivr.net/gh/projectdiscovery/nuclei-templates@v10.4.7"
+CDN = "https://cdn.jsdelivr.net/gh/projectdiscovery/nuclei-templates@main"
 
 def gh_api(path, retries=2):
     enc = urllib.parse.quote(path, safe='/')
-    url = f"https://api.github.com/repos/{REPO}/contents/{enc}?ref=v10.4.7"
+    url = f"https://api.github.com/repos/{REPO}/contents/{enc}?ref=main"
     for i in range(retries):
         try:
             req = urllib.request.Request(url, headers={'Authorization': f'token {TOKEN}'})
