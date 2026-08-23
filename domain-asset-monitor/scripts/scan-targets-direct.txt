@@ -1,0 +1,3 @@
+# 非 WAF 端口资产——跑 nuclei 漏洞扫描
+http://jumpserver.poppula.com:81
+https://jumpserver.poppula.com:444
