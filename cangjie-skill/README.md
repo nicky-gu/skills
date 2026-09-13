@@ -37,6 +37,8 @@ The website provides visual Skill Pack browsing, a beginner-friendly usage guide
 
 See the [v2.5.0 release notes](./docs/releases/v2.5.0.md) and [changelog](./CHANGELOG.md) for the complete scope and migration notes.
 
+**2026-09-13 refresh (still v2.5.0):** task-first validation now retains complete procedures and formulas explained in a single source location. Output scoring counts missing runs and checks numeric values/units; compiled Skills can carry declared scripts and text templates. [Download the refreshed generic Skill ZIP](https://github.com/kangarooking/cangjie-skill/releases/download/v2.5.0/cangjie-skill-2.5.0.zip) · [SHA256](https://github.com/kangarooking/cangjie-skill/releases/download/v2.5.0/cangjie-skill-2.5.0.zip.sha256). Extract it and install the complete `cangjie-skill/` directory. Existing users must download the refreshed package; check `BUILD_INFO.json` for the source commit and refresh date. The original tag is unchanged, so GitHub's automatic source archives do not contain this refresh.
+
 ## DeepSeek Harness Plugin
 
 cangjie-skill also provides a standalone installation package for DeepSeek Harness. The adapter layer is bundled in the Release package, so no platform-specific wrapper files are added to this repository.
@@ -87,7 +89,7 @@ cangjie-skill uses the **RIA-TV++** pipeline to transform source texts—includi
 
 1. **Whole-Content Comprehension (Adler Analysis)** — Structural, interpretive, critical, and applicability analysis using Mortimer Adler's method, producing `BOOK_OVERVIEW.md`
 2. **Parallel Extraction** — Five specialized extractors (frameworks, principles, cases, counter-examples, glossary) run simultaneously to pull candidate units from the source text
-3. **Triple Verification + Promotion Gate** — Each candidate must pass the evidence checks, then earn an independent entrypoint only when its use cases justify the added routing cost
+3. **Triple Verification + Promotion Gate** — Check source sufficiency, executability, and task utility by candidate type. A complete procedure or formula explained once can qualify; repetition or author originality is not mandatory. References and unresolved candidates remain auditable, and standalone entrypoints are decided separately
 4. **RIA++ Capability Construction** — Verified content is structured into R / I / A1 / A2 / E / B capability cards inside `.cangjie/capabilities/`
 5. **Zettelkasten Linking** — Dependencies, contrasts, and compositions are encoded in the Bundle's capability graph and shared glossary
 6. **Pressure Testing** — Test prompts including bait questions (and cross-skill confusion tests) are designed for each skill; failures go back for full reconstruction

@@ -37,6 +37,8 @@
 
 完整范围、兼容性和验证方式见 [v2.5.0 发布说明](./docs/releases/v2.5.0.md) 与 [Changelog](./CHANGELOG.md)。
 
+**2026-09-13 补充优化（仍为 v2.5.0）**：三重验证改为来源充分性、可执行性和任务增益，工具书中只在一处讲透的流程或公式也可入选；输出评分不再漏算缺失样本，支持数值/单位检查；编译产物可携带显式声明的脚本与文本模板。[下载通用 Skill ZIP](https://github.com/kangarooking/cangjie-skill/releases/download/v2.5.0/cangjie-skill-2.5.0.zip) · [SHA256](https://github.com/kangarooking/cangjie-skill/releases/download/v2.5.0/cangjie-skill-2.5.0.zip.sha256)。解压后安装完整 `cangjie-skill/` 目录。已安装用户请重新下载补包，通过 `BUILD_INFO.json` 核对源码提交与补包日期。原始标签保持不变，GitHub 自动生成的 Source code 压缩包仍是首次发布源码。
+
 ## DeepSeek Harness 插件
 
 cangjie-skill 同时提供独立的 DeepSeek Harness 插件安装包。适配层封装在 Release 安装包中，不会向本仓库加入特定平台的包装文件。
@@ -87,7 +89,7 @@ cangjie-skill 使用 **RIA-TV++** 流水线，先把书籍、视频转写、播�
 
 1. **整体内容理解（Adler 分析）**——借鉴 Mortimer Adler 的分析阅读法，对整份内容做结构、解释、批判、应用四步拆解，产出 `BOOK_OVERVIEW.md`
 2. **并行提取**——同时派 5 个专项提取器（框架、原则、案例、反例、术语），从原文中提取候选方法论单元
-3. **三重验证 + 晋级门**——候选先通过证据检验，再只在使用价值足以覆盖路由成本时晋级为独立入口
+3. **三重验证 + 晋级门**——按候选类型检查来源充分性、可执行性和任务增益；单处完整机制也可入选，不强求重复出现或作者独创。参考、待核查和淘汰项分别留痕，独立入口由后续晋级门决定
 4. **RIA++ 能力卡构造**——将验证通过的内容按 R / I / A1 / A2 / E / B 写入 `.cangjie/capabilities/`
 5. **Zettelkasten 链接**——将依赖、对比和组合关系写入 Bundle 的能力图和共享术语表
 6. **压力测试**——为每个 skill 设计包含诱饵题的测试用例（含跨 skill 混淆测试），未通过的回炉重做
