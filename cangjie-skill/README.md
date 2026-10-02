@@ -21,6 +21,10 @@
 
 </div>
 
+## Cangjie Skill in 66 seconds
+
+https://github.com/user-attachments/assets/87a2cf7b-2114-48aa-aecd-2640a667db40
+
 ## Official Website
 
 🌐 [Visit the Cangjie Skill official website](https://cangjie-skill.com/)

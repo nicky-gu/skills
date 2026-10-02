@@ -21,6 +21,10 @@
 
 </div>
 
+## 66 秒了解仓颉 Skill
+
+https://github.com/user-attachments/assets/87a2cf7b-2114-48aa-aecd-2640a667db40
+
 ## 官方网站
 
 🌐 [访问 Cangjie Skill 官方网站](https://cangjie-skill.com/)
