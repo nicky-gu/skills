@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<!--
+  TEMPLATE for 宜家/IKEA 舆情监控日报 — 由 ikea-reputation-monitor skill 生成。
+  替换变量：{{DATE}} {{WEEKDAY}} {{RECIPIENT}} {{WINDOW}}
+  下方 item 为格式范例；实际生成时按本轮 WebSearch 结果替换/增删，每条带原文链接。
+  情感：🔴neg / 🔵neu / 🟢pos ；优先级：P0(立即升级) / P1(本周跟进) / P2(常规监测)
+-->
+<title>宜家/IKEA 舆情监控日报（{{DATE}}）</title>
+<style>
+  body{font-family:-apple-system,"Microsoft YaHei","PingFang SC",sans-serif;color:#1a1a1a;line-height:1.65;max-width:860px;margin:0 auto;padding:18px;background:#fff;}
+  .title{font-size:21px;font-weight:700;color:#0d1b3e;border-bottom:3px solid #0d1b3e;padding-bottom:8px;margin:0 0 6px;}
+  .meta{color:#666;font-size:13px;margin:0 0 10px;}
+  .legend{font-size:12px;color:#444;background:#f7f7f9;border:1px solid #e3e3e8;border-radius:5px;padding:8px 12px;margin:0 0 14px;}
+  .legend b{color:#0d1b3e;}
+  .alert{background:#fdecea;border:2px solid #d32f2f;border-radius:8px;padding:14px 16px;margin:14px 0;}
+  .alert .tag{display:inline-block;background:#d32f2f;color:#fff;font-size:12px;font-weight:700;padding:2px 9px;border-radius:4px;margin-bottom:6px;}
+  .alert h2{margin:4px 0 8px;font-size:17px;color:#a00;}
+  .overview{background:#f5f5f5;border-left:4px solid #0d1b3e;padding:10px 14px;border-radius:4px;margin:14px 0;}
+  .overview ol{margin:6px 0;padding-left:20px;} .overview li{margin:6px 0;}
+  .board{margin:20px 0;} .board-h{font-size:16px;color:#fff;display:inline-block;padding:5px 12px;border-radius:4px;margin:0 0 10px;}
+  .b1 .board-h{background:#e65100;} .b2 .board-h{background:#d32f2f;} .b3 .board-h{background:#6a1b9a;} .b4 .board-h{background:#2e7d32;} .b5 .board-h{background:#1565c0;} .b6 .board-h{background:#546e7a;}
+  .item{border:1px solid #ececec;border-radius:6px;padding:10px 13px;margin:10px 0;}
+  .item h3{margin:0 0 6px;font-size:15px;color:#111;}
+  .pol{font-size:12px;color:#fff;padding:1px 7px;border-radius:3px;margin-right:4px;}
+  .neg{background:#d32f2f;} .neu{background:#757575;} .pos{background:#2e7d32;}
+  .pri{font-size:11px;font-weight:700;padding:1px 6px;border-radius:3px;margin-right:5px;color:#fff;}
+  .p0{background:#b71c1c;} .p1{background:#ef6c00;} .p2{background:#00695c;}
+  .fact{color:#333;margin:5px 0;} .act{color:#0d1b3e;font-weight:600;margin:5px 0;}
+  .link{color:#1565c0;font-size:13px;margin:5px 0;word-break:break-all;}
+  .hist{color:#999;font-size:12px;font-style:italic;margin:4px 0;}
+  .note{background:#fff8e1;border:1px solid #f0b400;border-radius:6px;padding:12px 14px;color:#7a5c00;font-size:13px;margin-top:18px;}
+  .note b{color:#a37b00;}
+  .repeat{background:#fafafa;border:1px dashed #bbb;border-radius:6px;padding:10px 14px;margin-top:16px;color:#555;font-size:13px;}
+  a{color:#1565c0;}
+</style>
+</head>
+<body>
+  <h1 class="title">宜家 / IKEA 舆情监控日报（{{DATE}}）</h1>
+  <div class="meta">日期：{{DATE}}（{{WEEKDAY}}）｜窗口：{{WINDOW}}｜收件：{{RECIPIENT}}（私密 · 仅内部）</div>
+
+  <div class="legend"><b>标注规则</b>　情感：🔴负面 / 🔵中性 / 🟢正面（处罚·召回·缺陷·客诉·误导·体验降级·供应链争议·裁员=负面；战略调整·价格·新店·渠道·财报=中性；ESG举措·正向联名·任命·降价惠民·增长新店=正面）。
+  　优先级：<span class="pri p0">P0</span>需立即升级 <span class="pri p1">P1</span>本周跟进 <span class="pri p2">P2</span>常规监测。</div>
+
+  <!-- 若有 P0 事件，复制此 alert 块并置顶；无则删除整个 .alert -->
+  <div class="alert"><span class="tag">P0 · 重点舆情预警</span>
+    <h2>[P0 事件标题]</h2>
+    <p class="fact">[时间线 + 关键事实 + 多方信源]</p>
+    <p class="act">甲方动作（升级建议）：[内部同步线 + 对外口径 + 跟踪点]</p>
+    <p class="link">原文：[链接]</p>
+  </div>
+
+  <div class="overview"><strong>📌 今日速览（去重后 · 按优先级）</strong><ol>
+    <li><span class="pri p0">P0</span><span class="pol neg">负面</span><a href="#">[P0 事件]</a></li>
+    <li><span class="pri p1">P1</span><span class="pol neg">负面</span><a href="#">[P1 事件]</a></li>
+    <li><span class="pri p2">P2</span><span class="pol pos">正面</span><a href="#">[P2 正面事件]</a></li>
+  </ol></div>
+
+  <section class="board b1"><h2 class="board-h">一、品牌声誉与经营动态</h2>
+    <div class="item"><h3><span class="pri p2">P2</span>[标题]</h3>
+      <span class="pol neu">中性</span>
+      <p class="fact">[事实]</p>
+      <p class="act">甲方动作：[建议]</p>
+      <p class="link">原文：<a href="#">[链接]</a></p>
+    </div>
+  </section>
+
+  <section class="board b2"><h2 class="board-h">二、产品 · 质量 · 召回</h2>
+    <div class="item"><h3><span class="pri p1">P1</span>[标题]</h3>
+      <span class="pol neg">负面</span>
+      <p class="fact">[事实]</p>
+      <p class="act">甲方动作：[建议]</p>
+      <p class="link">原文：<a href="#">[链接]</a></p>
+    </div>
+    <div class="item"><h3><span class="pri p2">P2</span>历史处罚参考 / 已排除项（不计入当期）</h3>
+      <span class="pol neu">中性</span>
+      <p class="hist">[历史旧闻及排除理由，如"全球提价9%"=2021-12-30 Reuters]</p>
+    </div>
+  </section>
+
+  <section class="board b3"><h2 class="board-h">三、客诉与社媒争议</h2>
+    <div class="item"><h3><span class="pri p1">P1</span>[标题，附量化互动量]</h3>
+      <span class="pol neg">负面</span>
+      <p class="fact">[事实]</p>
+      <p class="act">甲方动作：[建议]</p>
+      <p class="link">原文：<a href="#">[链接]</a></p>
+    </div>
+  </section>
+
+  <section class="board b4"><h2 class="board-h">四、ESG · 可持续 · 供应链</h2>
+    <div class="item"><h3><span class="pri p0">P0</span>⚠️ [供应链争议，若有]</h3>
+      <span class="pol neg">负面</span>
+      <p class="fact">[事实]</p>
+      <p class="act">升级路径：[见顶部重点预警格式]</p>
+    </div>
+    <div class="item"><h3><span class="pri p2">P2</span>[正面 ESG / 裁员动态]</h3>
+      <span class="pol pos">正面</span>
+      <p class="fact">[事实 + 硬数据]</p>
+      <p class="link">原文：<a href="#">[链接]</a></p>
+    </div>
+  </section>
+
+  <section class="board b5"><h2 class="board-h">五、国际动态（集团 / 竞品 / 法律）</h2>
+    <div class="item"><h3><span class="pri p2">P2</span>[美国/欧洲新店或降价]</h3>
+      <span class="pol pos">正面（增长语境）</span>
+      <p class="fact">[事实]</p>
+      <p class="link">原文：<a href="#">[链接]</a></p>
+    </div>
+    <div class="item"><h3><span class="pri p2">P2</span>[Reddit / 竞品 洞察]</h3>
+      <span class="pol neu">中性</span>
+      <p class="fact">[事实]</p>
+      <p class="link">原文：<a href="#">[链接]</a></p>
+    </div>
+    <p class="hist">竞品监测提示：[如"源氏木语反超宜家"等本土竞品叙事]</p>
+  </section>
+
+  <section class="board b6"><h2 class="board-h">六、网络安全 · 隐私 · 合规</h2>
+    <div class="item"><h3><span class="pri p2">P2</span>[有无专属数据/安全事件]</h3>
+      <span class="pol neu">中性</span>
+      <p class="fact">[事实；若无则注明"近期无宜家专属重大事件"]</p>
+      <p class="act">甲方动作：[保持监测 / 立即升级]</p>
+    </div>
+  </section>
+
+  <!-- 跨期去重：生产版每日读取近3天报告，重复事件降级至此 -->
+  <div class="repeat"><strong>🔁 跨期去重区（repeat）</strong>　[首日运行此区为空；后续若同一事件持续发酵，降级至此并标注"持续 N 天 / 新增量"]</div>
+
+  <div class="note"><strong>📋 本期优化与局限说明</strong><br>
+    [本期相较上期的改进点；以及客观局限：微博/小红书/抖音覆盖率约70–80%、精确赞评数偶有出入、仅公开渠道不构成合规意见等]</div>
+</body>
+</html>
